@@ -9,6 +9,7 @@ float stringToFloatVerificationConversion(string s)
 	int state = 0, power = -1;
 	int exponent = 0;
 	float floatNum = 0.0;
+	bool exponentNegativeFlag = false;
 
 	for (int i = 0; i <= s.length(); i++)
 	{
@@ -49,10 +50,6 @@ float stringToFloatVerificationConversion(string s)
 				state = 6;
 			}
 			else if (s[i] == 'f' || s[i] == 'F' || s[i] == 'd' || s[i] == 'D')
-			{
-				state = 8;
-			}
-			else if (s[i] == NULL)
 			{
 				state = 8;
 			}
@@ -155,6 +152,10 @@ float stringToFloatVerificationConversion(string s)
 				state = 7;
 				exponent += (s[i] - 48);
 			}
+			else if (s[i] == '-')
+			{
+				exponentNegativeFlag = true;
+			}
 			else
 			{
 				state = 9;
@@ -192,6 +193,10 @@ float stringToFloatVerificationConversion(string s)
 
 	if (state == 8)
 	{
+		if (exponentNegativeFlag)
+		{
+			exponent = exponent * -1;
+		}
 		return (floatNum * pow(10, exponent));
 	}
 	else if (state == 9)
@@ -202,8 +207,6 @@ float stringToFloatVerificationConversion(string s)
 
 float evaluate(float num1, float num2, char op)
 {
-	float tempNum = 0.0;
-
 	switch (op)
 	{
 	case '*':
@@ -224,13 +227,22 @@ float evaluate(float num1, float num2, char op)
 	}
 }
 
-float calculator(string s)
+float calculator(string oldString)
 {
 	stack<char> operatorStack;
 	stack<float> floatStack;
-	int state = 0;
+	stack<float> tempFloatStack;
+	int state = 0, floatStackSize = 0;
 	float tempFloat1 = 0.0, tempFloat2 = 0.0;
-	string tempString = "";
+	string s = "", tempString = "";
+
+	for (int i = 0; i < oldString.length(); i++)
+	{
+		if (oldString[i] != ' ')
+		{
+			s += oldString[i];
+		}
+	}
 
 	for (int i = 0; i <= s.length(); i++)
 	{
@@ -242,13 +254,9 @@ float calculator(string s)
 				state = 1;
 				operatorStack.push(s[i]);
 			}
-			else if (s[i] == ' ')
-			{
-				state = 5;
-			}
 			else if (s[i] == NULL)
 			{
-				state = 7;
+				state = 5;
 			}
 			else
 			{
@@ -273,7 +281,7 @@ float calculator(string s)
 				}
 				else if (stringToFloatVerificationConversion(tempString) == -1)
 				{
-					state = 7;
+					state = 5;
 				}
 				while (!operatorStack.empty() && operatorStack.top() != '(')
 				{
@@ -285,7 +293,7 @@ float calculator(string s)
 					operatorStack.pop();
 				}
 				operatorStack.pop();
-				while (!operatorStack.empty() && (operatorStack.top() == '*' || operatorStack.top() == '/'))
+				while (!operatorStack.empty() && (operatorStack.top() == '*' || operatorStack.top() == '/') && floatStack.size() > 1)
 				{
 					tempFloat1 = floatStack.top();
 					floatStack.pop();
@@ -294,10 +302,6 @@ float calculator(string s)
 					floatStack.push(evaluate(tempFloat2, tempFloat1, operatorStack.top()));
 					operatorStack.pop();
 				}
-			}
-			else if (s[i] == ' ')
-			{
-				state = 5;
 			}
 			else
 			{
@@ -320,7 +324,7 @@ float calculator(string s)
 					operatorStack.pop();
 				}
 				operatorStack.pop();
-				while (!operatorStack.empty() && (operatorStack.top() == '*' || operatorStack.top() == '/'))
+				while (!operatorStack.empty() && (operatorStack.top() == '*' || operatorStack.top() == '/') && floatStack.size() > 1)
 				{
 					tempFloat1 = floatStack.top();
 					floatStack.pop();
@@ -332,36 +336,38 @@ float calculator(string s)
 			}
 			else if (s[i] == '+' || s[i] == '-' || s[i] == '*' || s[i] == '/')
 			{
-				state = 4;
+				state = 1;
 				operatorStack.push(s[i]);
 			}
 			else if (s[i] == NULL)
 			{
-				state = 6;
-				while (!operatorStack.empty())
+				state = 4;
+				floatStackSize = floatStack.size();
+				for (int i = 0; i < floatStackSize; i++)
 				{
-					tempFloat1 = floatStack.top();
+					tempFloatStack.push(floatStack.top());
 					floatStack.pop();
-					tempFloat2 = floatStack.top();
-					floatStack.pop();
-					floatStack.push(evaluate(tempFloat2, tempFloat1, operatorStack.top()));
+				}
+				while (!operatorStack.empty() && tempFloatStack.size() > 1)
+				{
+					tempFloat1 = tempFloatStack.top();
+					tempFloatStack.pop();
+					tempFloat2 = tempFloatStack.top();
+					tempFloatStack.pop();
+					tempFloatStack.push(evaluate(tempFloat1, tempFloat2, operatorStack.top()));
 					operatorStack.pop();
 				}
 			}
-			else if (s[i] == ' ')
-			{
-				state = 5;
-			}
 			else
 			{
-				state = 7;
+				state = 5;
 			}
 			break;
 
 		case 3:
-			if (s[i] == '+' || s[i] == '-')
+			if ((s[i] == '+' || s[i] == '-') && tempString[tempString.size() - 1] != 'e')
 			{
-				state = 4;
+				state = 1;
 				if (stringToFloatVerificationConversion(tempString) > -1)
 				{
 					floatStack.push(stringToFloatVerificationConversion(tempString));
@@ -369,9 +375,9 @@ float calculator(string s)
 				}
 				else if (stringToFloatVerificationConversion(tempString) == -1)
 				{
-					state = 7;
+					state = 5;
 				}
-				while (!operatorStack.empty() && (operatorStack.top() == '*' || operatorStack.top() == '/'))
+				while (!operatorStack.empty() && (operatorStack.top() == '*' || operatorStack.top() == '/') && floatStack.size() > 1)
 				{
 					tempFloat1 = floatStack.top();
 					floatStack.pop();
@@ -384,11 +390,15 @@ float calculator(string s)
 			}
 			else if (s[i] == '*' || s[i] == '/')
 			{
-				state = 4;
+				state = 1;
 				if (stringToFloatVerificationConversion(tempString) > -1)
 				{
 					floatStack.push(stringToFloatVerificationConversion(tempString));
 					tempString = "";
+				}
+				else if (stringToFloatVerificationConversion(tempString) == -1)
+				{
+					state = 5;
 				}
 				operatorStack.push(s[i]);
 			}
@@ -402,9 +412,9 @@ float calculator(string s)
 				}
 				else if (stringToFloatVerificationConversion(tempString) == -1)
 				{
-					state = 7;
+					state = 5;
 				}
-				while (!operatorStack.empty() && operatorStack.top() != '(')
+				while (!operatorStack.empty() && operatorStack.top() != '(' && floatStack.size() > 1)
 				{
 					tempFloat1 = floatStack.top();
 					floatStack.pop();
@@ -414,7 +424,7 @@ float calculator(string s)
 					operatorStack.pop();
 				}
 				operatorStack.pop();
-				while (!operatorStack.empty() && (operatorStack.top() == '*' || operatorStack.top() == '/'))
+				while (!operatorStack.empty() && (operatorStack.top() == '*' || operatorStack.top() == '/') && floatStack.size() > 1)
 				{
 					tempFloat1 = floatStack.top();
 					floatStack.pop();
@@ -424,66 +434,7 @@ float calculator(string s)
 					operatorStack.pop();
 				}
 			}
-			else if (s[i] == ' ')
-			{
-				state = 5;
-			}
 			else if (s[i] == NULL)
-			{
-				state = 6;
-				if (stringToFloatVerificationConversion(tempString) > -1)
-				{
-					floatStack.push(stringToFloatVerificationConversion(tempString));
-					tempString = "";
-				}
-				else if (stringToFloatVerificationConversion(tempString) == -1)
-				{
-					state = 7;
-				}
-				while (!operatorStack.empty())
-				{
-					tempFloat1 = floatStack.top();
-					floatStack.pop();
-					tempFloat2 = floatStack.top();
-					floatStack.pop();
-					floatStack.push(evaluate(tempFloat2, tempFloat1, operatorStack.top()));
-					operatorStack.pop();
-				}
-			}
-			else
-			{
-				state = 3;
-				tempString += s[i];
-			}
-			break;
-
-		case 4:
-			if (s[i] == ' ')
-			{
-				state = 5;
-			}
-			else if (s[i] == '(')
-			{
-				state = 1;
-				operatorStack.push(s[i]);
-			}
-			else if (s[i] == NULL)
-			{
-				state = 7;
-			}
-			else
-			{
-				state = 3;
-				tempString += s[i];
-			}
-			break;
-
-		case 5:
-			if (s[i] == ' ')
-			{
-				state = 5;
-			}
-			else if (s[i] == '+' || s[i] == '-')
 			{
 				state = 4;
 				if (stringToFloatVerificationConversion(tempString) > -1)
@@ -491,83 +442,23 @@ float calculator(string s)
 					floatStack.push(stringToFloatVerificationConversion(tempString));
 					tempString = "";
 				}
-				while (!operatorStack.empty() && (operatorStack.top() == '*' || operatorStack.top() == '/'))
-				{
-					tempFloat1 = floatStack.top();
-					floatStack.pop();
-					tempFloat2 = floatStack.top();
-					floatStack.pop();
-					floatStack.push(evaluate(tempFloat2, tempFloat1, operatorStack.top()));
-					operatorStack.pop();
-				}
-				operatorStack.push(s[i]);
-			}
-			else if (s[i] == '*' || s[i] == '/')
-			{
-				state = 4;
-				if (stringToFloatVerificationConversion(tempString) > -1)
-				{
-					floatStack.push(stringToFloatVerificationConversion(tempString));
-					tempString = "";
-				}
-				operatorStack.push(s[i]);
-			}
-			else if (s[i] == NULL)
-			{
-				state = 6;
-				if (stringToFloatVerificationConversion(tempString) > -1)
-				{
-					floatStack.push(stringToFloatVerificationConversion(tempString));
-					tempString = "";
-				}
 				else if (stringToFloatVerificationConversion(tempString) == -1)
 				{
-					state = 7;
+					state = 5;
 				}
-				while (!operatorStack.empty())
+				floatStackSize = floatStack.size();
+				for (int i = 0; i < floatStackSize; i++)
 				{
-					tempFloat1 = floatStack.top();
+					tempFloatStack.push(floatStack.top());
 					floatStack.pop();
-					tempFloat2 = floatStack.top();
-					floatStack.pop();
-					floatStack.push(evaluate(tempFloat2, tempFloat1, operatorStack.top()));
-					operatorStack.pop();
 				}
-			}
-			else if (s[i] == '(')
-			{
-				state = 1;
-				operatorStack.push(s[i]);
-			}
-			else if (s[i] == ')')
-			{
-				state = 2;
-				if (stringToFloatVerificationConversion(tempString) > -1)
+				while (!operatorStack.empty() && state != 5 && tempFloatStack.size() > 1)
 				{
-					floatStack.push(stringToFloatVerificationConversion(tempString));
-					tempString = "";
-				}
-				else if (stringToFloatVerificationConversion(tempString) == -1)
-				{
-					state = 7;
-				}
-				while (!operatorStack.empty() && operatorStack.top() != '(')
-				{
-					tempFloat1 = floatStack.top();
-					floatStack.pop();
-					tempFloat2 = floatStack.top();
-					floatStack.pop();
-					floatStack.push(evaluate(tempFloat2, tempFloat1, operatorStack.top()));
-					operatorStack.pop();
-				}
-				operatorStack.pop();
-				while (!operatorStack.empty() && (operatorStack.top() == '*' || operatorStack.top() == '/'))
-				{
-					tempFloat1 = floatStack.top();
-					floatStack.pop();
-					tempFloat2 = floatStack.top();
-					floatStack.pop();
-					floatStack.push(evaluate(tempFloat2, tempFloat1, operatorStack.top()));
+					tempFloat1 = tempFloatStack.top();
+					tempFloatStack.pop();
+					tempFloat2 = tempFloatStack.top();
+					tempFloatStack.pop();
+					tempFloatStack.push(evaluate(tempFloat1, tempFloat2, operatorStack.top()));
 					operatorStack.pop();
 				}
 			}
@@ -580,13 +471,17 @@ float calculator(string s)
 		}
 	}
 
-	if (state == 6)
+	if (state == 4)
 	{
-		return floatStack.top();
+		return tempFloatStack.top();
 	}
-	else if (state == 7)
+	else if (state == 5 && s.empty())
 	{
 		return -1;
+	}
+	else if (state == 5)
+	{
+		return -2;
 	}
 }
 
@@ -605,11 +500,15 @@ int main()
 
 		if (convertedFloat > -1)
 		{
-			cout << "Result: " << convertedFloat << endl;
+			cout << "Calculation Result: " << convertedFloat << endl;
 		}
 		else if (convertedFloat == -1)
 		{
-			cout << "Entered string is wrong or empty." << endl;
+			cout << "Empty strings don't need calculation :)" << endl;
+		}
+		else if (convertedFloat == -2)
+		{
+			cout << "Invalid Input" << endl;
 		}
 	}
 
